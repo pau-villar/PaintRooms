@@ -49,8 +49,19 @@ io.on("connection", (socket) => {
     // Estado inicial solo para quien entra
     callback?.({ user, strokes: room.strokes, users: getUsersList(roomName) });
 
+    socket.to(roomName).emit("cursor_leave", socket.id);
+
     // Lista actualizada para toda la sala
     io.to(roomName).emit("room_users", getUsersList(roomName));
+
+    socket.on("clear_canvas", () => {
+      const roomName = socket.data.roomName;
+      const room = rooms.get(roomName);
+      if (!room) return;
+
+      room.strokes.length = 0;          // vaciamos el buffer de la sala
+      io.to(roomName).emit("clear_canvas");
+    });
   });
 
   socket.on("disconnect", () => {
@@ -60,6 +71,32 @@ io.on("connection", (socket) => {
 
     room.users.delete(socket.id);
     io.to(roomName).emit("room_users", getUsersList(roomName));
+  });
+
+  socket.on("cursor_move", ({ x, y }) => {
+    const roomName = socket.data.roomName;
+    if (!roomName) return;
+
+    const user = rooms.get(roomName)?.users.get(socket.id);
+    if (!user) return;
+
+    socket.to(roomName).emit("cursor_move", {
+      id: socket.id,
+      username: user.username,
+      color: user.color,
+      x,
+      y,
+    });
+  });
+
+  socket.on("draw", (segment) => {
+    const roomName = socket.data.roomName;
+    const room = rooms.get(roomName);
+    if (!room) return;
+
+    room.strokes.push(segment);
+    if (room.strokes.length > 5000) room.strokes.shift();
+    socket.to(roomName).emit("draw", segment);
   });
 });
 

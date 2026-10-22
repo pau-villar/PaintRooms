@@ -5,4 +5,6 @@ export const state = reactive({
   me: null,      // mi usuario { username, color }
   users: [],     // usuarios de la sala
   strokes: [],   // trazos iniciales (los usaremos más adelante)
+  cursors: {},   // id -> { username, color, x, y }
 });
+
